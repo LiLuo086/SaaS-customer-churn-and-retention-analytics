@@ -10,16 +10,16 @@
 
 -- =============== ACCOUNTS ================================
 CREATE TABLE IF NOT EXISTS accounts(
-account_id			TEXT PRIMARY KEY,
-account_name		TEXT NOT NULL,
-industry			TEXT,
-country				TEXT,
-signup_date			DATE,
+account_id			  TEXT PRIMARY KEY,
+account_name		  TEXT NOT NULL,
+industry			    TEXT,
+country				    TEXT,
+signup_date			  DATE,
 referral_source		TEXT,
-plan_tier			TEXT,
-seats				INT,
-is_trial 			BOOLEAN,
-churn_flag			BOOLEAN
+plan_tier			    TEXT,
+seats				      INT,
+is_trial 			    BOOLEAN,
+churn_flag		    BOOLEAN
 );
 
 CREATE INDEX IF NOT EXISTS idx_accounts_plan_tier ON accounts(plan_tier);
@@ -29,18 +29,18 @@ CREATE INDEX IF NOT EXISTS idx_accounts_signup_date ON accounts(signup_date);
 -- =============== SUBSCRIPTIONS ===========================
 CREATE TABLE IF NOT EXISTS subscriptions(
 subscription_id 	TEXT PRIMARY KEY,
-account_id			TEXT NOT NULL REFERENCES accounts(account_id),
-start_date			DATE,
-end_date			DATE,
-plan_tier			TEXT,
-seats				INT,
-mrr_amount			NUMERIC(10,2),
-arr_amount			NUMERIC(12,2),
-is_trial			BOOLEAN,
-upgrade_flag		BOOLEAN,
+account_id			  TEXT NOT NULL REFERENCES accounts(account_id),
+start_date			  DATE,
+end_date			    DATE,
+plan_tier			    TEXT,
+seats				      INT,
+mrr_amount			  NUMERIC(10,2),
+arr_amount			  NUMERIC(12,2),
+is_trial			    BOOLEAN,
+upgrade_flag		  BOOLEAN,
 downgrade_flag		BOOLEAN,
-churn_flag			BOOLEAN,
-billing_frequency   TEXT,
+churn_flag			  BOOLEAN,
+billing_frequency TEXT,
 auto_renew_flag		BOOLEAN
 );
 

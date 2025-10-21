@@ -16,14 +16,14 @@ SELECT * FROM subscriptions LIMIT 5;
 SELECT * FROM support_tickets LIMIT 5;
 
 
--- ============ Create Analytics SQL Views ==============
+-- ============ 1. Create Analytics SQL Views ==============
 
 -- ============ Monthly active customers ============
 CREATE OR REPLACE VIEW monthly_active_customers AS
 WITH bounds AS (
   SELECT
     date_trunc('month', MIN(start_date))::date AS first_month,
-    date_trunc('month', MAX(COALESCE(end_date, CURRENT_DATE)))::date AS last_month
+    date_trunc('month', MAX(end_date))::date AS last_month
   FROM subscriptions
 ),
 months AS (
@@ -40,7 +40,6 @@ JOIN subscriptions s
 GROUP BY m.month_start
 ORDER BY m.month_start;
 
-
 -- SELECT * FROM monthly_active_customers;
 
 
@@ -56,15 +55,16 @@ GROUP BY 1
 SELECT 
 	a.month_start,
 	a.active_customers,
-	c.churned_customers,
+	COALESCE(c.churned_customers, 0) AS churned_customers,
 	ROUND(
-		(c.churned_customers::numeric/NULLIF(a.active_customers,0))*100,2
+		(COALESCE(c.churned_customers, 0)::numeric/NULLIF(a.active_customers,0))*100,2
 	) AS churn_rate
 FROM monthly_active_customers AS a
 LEFT JOIN churned AS c
 ON a.month_start = c.churned_month
 ORDER BY a.month_start;
 
+-- SELECT * FROM monthly_churn_rate;
 
 -- ============= Monthly revenue(MRR & ARR)
 CREATE OR REPLACE VIEW monthly_revenue AS
@@ -78,6 +78,38 @@ GROUP BY 1
 ORDER BY 1;
 
 -- SELECT * FROM monthly_revenue;
+
+
+-- ============= Monthly new accounts ==============
+CREATE OR REPLACE VIEW monthly_new_accounts AS
+SELECT 
+	DATE_TRUNC('month', signup_date)::date AS month_start,
+	COUNT(DISTINCT account_id) AS new_accounts
+FROM accounts
+GROUP BY 1
+ORDER BY 1;
+
+-- SELECT * FROM monthly_new_accounts
+
+
+-- ============== Monthly retention summary ============
+CREATE OR REPLACE VIEW monthly_retention_summary AS
+SELECT 
+	a.month_start,
+	COALESCE(n.new_accounts, 0) AS new_accounts,
+	a.active_customers,
+	SUM(COALESCE(n.new_accounts,0)) OVER (ORDER BY a.month_start) AS cumulative_new_accounts,
+	ROUND(
+		(a.active_customers::numeric/NULLIF(SUM(COALESCE(n.new_accounts,0)) OVER (ORDER BY a.month_start),0))*100,2
+	) AS retention_pct_estimate
+FROM monthly_active_customers AS a
+LEFT JOIN monthly_new_accounts AS n
+ON a.month_start = n.month_start
+GROUP BY 1,2,3
+ORDER BY 1;
+
+
+-- SELECT * FROM monthly_retention_summary
 
 
 -- ============= Revenue by plan tier ==============
@@ -95,25 +127,22 @@ ORDER BY total_mrr DESC;
 -- SELECT * FROM revenue_by_plan;
 
 
--- ============ Retention cohort ================
-CREATE OR REPLACE VIEW retention_cohort AS
-WITH cohort AS (
-    SELECT account_id,
-           DATE_TRUNC('month', signup_date) AS cohort_month
-    FROM accounts
-),
-activity AS (
-    SELECT account_id,
-           DATE_TRUNC('month', start_date)  AS active_month
-    FROM subscriptions
-)
-SELECT
-    c.cohort_month,
-    a.active_month,
-    COUNT(DISTINCT a.account_id) AS active_users
-FROM cohort c
-JOIN activity a USING (account_id)
-GROUP BY 1, 2
-ORDER BY 1, 2;
+-- ================ 2. Validate Views ==================
 
+-- Check monthly active customers trend
+SELECT * FROM monthly_active_customers ORDER BY month_start;
 
+-- Verify churn rate is reasonable 
+SELECT * FROM monthly_churn_rate ORDER BY month_start;
+
+-- Check revenue growth
+SELECT * FROM monthly_revenue ORDER BY month;
+
+-- Check monthly new customers 
+SELECT * FROM monthly_new_accounts;
+
+-- Compare new vs active accounts
+SELECT * FROM monthly_retention_summary ORDER BY month_start;
+
+-- Verify plan-level revenue breakdown
+SELECT * FROM revenue_by_plan;
