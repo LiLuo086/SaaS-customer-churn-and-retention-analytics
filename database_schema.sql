@@ -1,5 +1,5 @@
 -- =========================================================
--- Schema: SaaS Customer Churn & Retention (PostgreSQL DDL)
+-- Schema: SaaS_Customer_Churn_Retention (PostgreSQL DDL)
 -- Tables derived from:
 --   ravenstack_accounts.csv
 --   ravenstack_subscriptions.csv
